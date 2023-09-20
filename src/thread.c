@@ -2,6 +2,7 @@
 #include <zephyr.h>
 #include <arch/cpu.h>
 #include <sys/printk.h>
+#include "lock.h"
 
 #define STACKSIZE 2000
 #define SLEEPTIME 1000
@@ -27,6 +28,7 @@ void thread_entry(void)
 int main(void)
 {
     counter = 0;
+    k_sem_init(&semaphore, 1, 1);
     k_thread_create(&coop_thread,
                     coop_stack,
                     STACKSIZE,
