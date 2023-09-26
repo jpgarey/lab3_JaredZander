@@ -61,26 +61,32 @@ void deadlock_supervisor(void)
     // Right starts locked,
     k_sem_init(&right, 1, 1);
     printf("- Creating threads\n");
+    // Create threads with 2 shared semaphores (left and right), and their own counter (for status).
+    // Switch the order of the 2 semaphores so that a deadlock happens.
     k_tid_t l = k_thread_create(&left_thread, left_stack, STACK_SIZE,
                                 (k_thread_entry_t) deadlock,
-                                &left, &right, &counter0,
+                                &left, &right, &counter0, // 3 parameters p1, p2, p3
                                 K_PRIO_COOP(6),
                                 0,
                                 K_NO_WAIT);
     k_tid_t r = k_thread_create(&right_thread, right_stack, STACK_SIZE,
                                 (k_thread_entry_t) deadlock,
-                                &right, &left, &counter1,
+                                &right, &left, &counter1, // 3 parameters p1, p2, p3
                                 K_PRIO_COOP(6),
                                 0,
                                 K_NO_WAIT);
     printf("- Created threads\n");
 
+    // Attempt to join threads to this current thread. They should fail, so output how long we waited.
     int left_done = k_thread_join(l, K_MSEC(1000));
     printf("- Waited left %d\n", left_done);
     int right_done = k_thread_join(r, K_MSEC(1000));
     printf("- Waited right %d\n", right_done);
+
+    // Test for error EAGIN (no more processes), just to show that the thread join failed.
     TEST_ASSERT_EQUAL_INT(-EAGAIN, left_done);
     TEST_ASSERT_EQUAL_INT(-EAGAIN, right_done);
+    
     printf("- Killing threads\n");
     k_thread_abort(l);
     k_thread_abort(r);
@@ -123,4 +129,3 @@ int main(void)
     RUN_TEST(test_deadlock);
 
     return UNITY_END();
-}
