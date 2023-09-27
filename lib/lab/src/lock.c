@@ -49,3 +49,20 @@ void deadlock(struct k_sem *a, struct k_sem *b, int *counter)
     }
     k_sem_give(a);
 }
+
+
+void orphaned_lock(struct k_sem *semaphore, int *counter)
+{
+    while (1) {
+        k_sem_take(&semaphore, K_FOREVER);
+        (*counter)++;
+        
+        // Exit while loop if counter is ODD, so we fail to release the semaphore
+        if ((*counter) % 2) {
+            continue;
+        }
+        printk("Count %d\n", (*counter));
+        // release semaphore
+        k_sem_give(&semaphore);
+    }
+}

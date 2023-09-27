@@ -116,6 +116,59 @@ void test_deadlock(void)
     TEST_ASSERT_EQUAL_INT(3, counter1);
 }
 
+/*********************** Orphan Lock testing ************************/
+struct k_thread orph_lock_thread;
+struct k_sem orph_lock_sem;
+int counter_orph = 1;
+
+void test_orphaned_supervisor(void)
+{
+    printf("starting orphaned lock test\n");
+    k_sem_init(&orph_lock_sem, 1, 1);
+
+    k_tid_t thread_tid = k_thread_create(&sup_thread,
+                    sup_stack,
+                    STACK_SIZE,
+                    (k_thread_entry_t) orphaned_lock,
+                    &orph_lock_sem, &counter_orph, NULL,
+                    K_PRIO_COOP(7),
+                    0,
+                    K_NO_WAIT);
+
+    // the thread will finish after 2 loops, but not release semaphore
+    int thread_done = k_thread_join(thread_tid, K_MSEC(1000));
+    printf("- Waited left %d\n", thread_done);
+    TEST_ASSERT_EQUAL_INT(-EDEADLK, thread_done); // Test to show thread is deadlocked
+    TEST_ASSERT_EQUAL_INT(3, counter_orph); // Test counter value
+
+    // test to see how many times the semaphore was taken
+    TEST_ASSERT_EQUAL_INT(2, k_sem_count_get(&orph_lock_sem));
+    printf("- sem_get_count = %d\n",  k_sem_count_get(&orph_lock_sem));
+
+    // attempt to take the semaphore again
+    k_sem_take(&orph_lock_sem, K_MSEC(1000));
+    // Test to see if it failed
+    TEST_ASSERT_EQUAL_INT(2, k_sem_count_get(&orph_lock_sem));
+
+    k_thread_abort(thread_tid);
+    printf("- Killing thread\n");
+}
+
+void test_orphaned_lock(void)
+{
+    printf("Start supervisor\n");
+    k_thread_create(&sup_thread,
+                    sup_stack,
+                    STACK_SIZE,
+                    (k_thread_entry_t) test_orphaned_supervisor,
+                    NULL, NULL, NULL,
+                    K_PRIO_COOP(7),
+                    0,
+                    K_NO_WAIT);
+    
+    k_thread_join(&sup_thread, K_FOREVER); // wait until the supervisor thread is done
+    printf("Finished supervisor\n");
+}
 
 int main(void)
 {
@@ -127,5 +180,7 @@ int main(void)
     RUN_TEST(test_loop_blocks);
     RUN_TEST(test_loop_runs);
     RUN_TEST(test_deadlock);
+    RUN_TEST(test_orphaned_lock);
 
     return UNITY_END();
+}
