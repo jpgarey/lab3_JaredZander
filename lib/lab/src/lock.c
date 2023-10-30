@@ -51,18 +51,23 @@ void deadlock(struct k_sem *a, struct k_sem *b, int *counter)
 }
 
 
-void orphaned_lock(struct k_sem *semaphore, int *counter)
+void orphaned_lock(struct k_sem *semaphore, int *counter, int *sem_count)
 {
+
     while (1) {
-        k_sem_take(&semaphore, K_FOREVER);
+        printk("loop entered with value %d\n", (*counter));
+        k_sem_take(semaphore, K_FOREVER);
         (*counter)++;
+        printk("Counter inceremented, new value: %d\n", (*counter));
         
         // Exit while loop if counter is ODD, so we fail to release the semaphore
         if ((*counter) % 2) {
+            printk("iteration broken, sem not given \n");
             continue;
         }
-        printk("Count %d\n", (*counter));
+        printk("Loop ended with count %d\n", (*counter));
         // release semaphore
-        k_sem_give(&semaphore);
+        sem_count = k_sem_count_get(semaphore);
+        k_sem_give(semaphore);
     }
 }

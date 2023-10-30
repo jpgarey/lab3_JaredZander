@@ -12,4 +12,4 @@ int do_loop(struct k_timer *timer,
             k_timeout_t timeout);
 
 void deadlock(struct k_sem *a, struct k_sem *b, int *counter);
-void orphaned_lock(struct k_sem *semaphore, int *counter);
+void orphaned_lock(struct k_sem *semaphore, int *counter, int *sem_count);
